@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 
-# Load the image (update the filename/path if necessary)
-frame = cv2.imread("./play01/frame_001.jpg")
+# Load the image (update the filename/path as necessary)
+frame = cv2.imread("./play03/frame_001.jpg")
 if frame is None:
     print("Error: Could not load image.")
     exit()
@@ -10,51 +10,46 @@ if frame is None:
 # Get image dimensions
 H, W, _ = frame.shape
 
-# Create a mask that retains only the top 1/3 of the image
+# Create a mask that retains only the top 1/3 of the image (where yard lines typically are)
 mask = np.zeros((H, W), dtype=np.uint8)
-mask[0:H//3, :] = 255  # White in top 1/3, black elsewhere
+mask[0:H//3, :] = 255  # white in the top 1/3
 
-# Apply the mask to the image
+# Apply the mask
 masked_frame = cv2.bitwise_and(frame, frame, mask=mask)
 
-# Convert the masked image to grayscale
+# Convert the masked image to grayscale and apply Gaussian blur
 gray = cv2.cvtColor(masked_frame, cv2.COLOR_BGR2GRAY)
-
-# Apply Gaussian blur to reduce noise
 blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
 # Perform Canny edge detection
 edges = cv2.Canny(blurred, 50, 150)
 
-# Use HoughLinesP to detect lines in the edge image
-lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=50, minLineLength=20, maxLineGap=10)
+# Use HoughLinesP to detect line segments
+lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=20, maxLineGap=10)
 
-# Create a copy of the original frame for drawing detected lines
-output = frame.copy()
-
+# Filter for nearly vertical lines (assuming yard lines are vertical in your frame)
 detected_lines = []
-
-# Filter lines for nearly vertical lines (yard lines)
 if lines is not None:
     for line in lines:
         x1, y1, x2, y2 = line[0]
-        # Calculate the angle in degrees relative to horizontal
         angle = np.degrees(np.arctan2(y2 - y1, x2 - x1))
-        # Adjust the filter: if yard lines are vertical, they should be near 90 or -90 degrees.
-        if abs(abs(angle) - 90) < 45:  # within ±45° of vertical
+        # Accept lines with an angle near ±90° (within 45° tolerance)
+        if abs(abs(angle) - 90) < 45:
             detected_lines.append([x1, y1, x2, y2])
-            
+
+# Combine lines that are close together using a simple threshold on their mid-x coordinates
 combined_lines = []
 if detected_lines:
     # Sort lines by their mid-x value
     detected_lines.sort(key=lambda l: (l[0] + l[2]) / 2)
-    cluster_threshold = 10  # pixels; adjust based on your image resolution
+    cluster_threshold = 100  # pixels; adjust as needed
     current_cluster = [detected_lines[0]]
     
     for line in detected_lines[1:]:
         mid_current = (line[0] + line[2]) / 2
+        # Calculate the mean mid-x of the current cluster
         cluster_mid = np.mean([(l[0] + l[2]) / 2 for l in current_cluster])
-        if abs(mid_current - cluster_mid) < cluster_threshold:
+        if abs(mid_current - cluster_mid) <= cluster_threshold:
             current_cluster.append(line)
         else:
             # Average the lines in the current cluster
@@ -72,15 +67,32 @@ if detected_lines:
         y2_avg = int(np.mean([l[3] for l in current_cluster]))
         combined_lines.append([x1_avg, y1_avg, x2_avg, y2_avg])
 
-# Draw the combined lines onto the original image with a thicker line width
-output = frame.copy()
+# Optionally, print the combined lines for debugging
+for cl in combined_lines:
+    print("Combined line:", cl)
+
+# Extend each combined line to span the full height of the image
+extended_lines = []
 for line in combined_lines:
-    print(line)
+    x1, y1, x2, y2 = line
+    if x2 != x1:
+        slope = (y2 - y1) / (x2 - x1)
+        intercept = y1 - slope * x1
+        # Compute new x positions for y=0 and y=H
+        x1_new = int((0 - intercept) / slope)
+        x2_new = int((H - intercept) / slope)
+        extended_lines.append([x1_new, 0, x2_new, H])
+    else:
+        extended_lines.append([x1, 0, x2, H])
+
+# Draw the extended lines on a copy of the original image
+output = frame.copy()
+for line in extended_lines:
     x1, y1, x2, y2 = line
     cv2.line(output, (x1, y1), (x2, y2), (0, 255, 0), 4)  # thickness=4
 
 # Display the results
 cv2.imshow("Blurred", blurred)
-cv2.imshow("Detected Yard Lines", output)
+cv2.imshow("Detected and Combined Yard Lines", output)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
