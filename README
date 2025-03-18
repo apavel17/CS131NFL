@@ -1,1 +1,48 @@
 NFL Film Analysis
+
+Overview
+This project aims to identify defensive players’ positions (e.g., defensive linemen, linebackers, defensive backs) from single pre-snap All-22 images of NFL games. We use computer vision methods to detect yard lines, locate players, and classify defenders based on their distance from the line of scrimmage (LOS) and other spatial features.
+
+Project Steps
+Data Acquisition & Setup
+
+All-22 Images: We gather raw frames from NFL All-22 film just before the snap.
+Each image should clearly show the entire defensive side of the field.
+
+Field Calibration
+
+Yard Line Detection:
+Use Hough transforms (e.g., OpenCV cv2.HoughLinesP) to locate horizontal yard lines.
+Coordinate Mapping:
+Define the line of scrimmage (LOS).
+Estimate an affine transform so that pixel coordinates map to approximate yard distances.
+Player Detection
+
+Object Detector:
+Use a pre-trained model (YOLO) to identify all 22 players in the image.
+
+Defensive Position Classification
+
+Heuristic or ML Approach:
+Heuristic:
+If a player is within ~3 yards of the LOS, classify as Defensive Lineman (DL).
+If within ~3–8 yards, classify as Linebacker (LB).
+If beyond 8–10+ yards, classify as Defensive Back (DB).
+You can refine thresholds based on empirical observations or typical alignments.
+
+Next Steps:
+
+Machine Learning:
+Create labeled examples (DL, LB, DB) based on real NFL footage.
+Use each player’s distance from the LOS, side offset, or uniform color as features.
+Train a small classifier (e.g., decision tree) to predict DL vs. LB vs. DB.
+Output & Visualization
+
+Draw bounding boxes or markers for each defender on the image.
+Label each box with the predicted position group (DL, LB, DB).
+(Optional) Summarize the count of each position in the final output (e.g., “4 DL, 3 LB, 4 DB”).
+Evaluation
+
+Compare predicted positions to ground-truth labels.
+Use accuracy, precision/recall, or confusion matrices to measure performance.
+Inspect mislabeled players and adjust thresholds or model features as needed.

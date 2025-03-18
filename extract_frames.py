@@ -8,7 +8,7 @@ start_time_sec = 1696
 num_frames = 1
 
 workspace_dir = os.path.abspath(os.path.dirname(__file__)) 
-output_dir = os.path.join(workspace_dir, "play02") 
+output_dir = os.path.join(workspace_dir, "play04") 
 os.makedirs(output_dir, exist_ok=True)
 
 cap = cv2.VideoCapture(video_path)
