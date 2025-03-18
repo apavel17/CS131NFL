@@ -21,9 +21,8 @@ for result in results:
     person_boxes = []
     person_confidences = []
     for box, cls, conf in zip(boxes, classes, confidences):
-        if int(cls) == 0:
-            person_boxes.append(box)
-            person_confidences.append(float(conf))
+        person_boxes.append(box)
+        person_confidences.append(float(conf))
 
     # Convert boxes from [x1, y1, x2, y2] to [x, y, w, h] for OpenCV's NMS function
     boxes_xywh = []
